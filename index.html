@@ -1,0 +1,108 @@
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<style>
+			.minefield{
+				height: calc(100vmin - 16px);
+				width: calc(100vmin - 16px);
+				display:grid;
+				grid-template-rows: repeat(10, 1fr);
+				grid-template-columns: repeat(10, 1fr);
+				gap: 10px;
+			}
+			z{
+				font-family: Segoe UI, -apple-system, Ubuntu;
+				display:flex;
+				align-items:center;
+				justify-content:center;
+				border-radius: 10%;
+				font-size:2.5em;
+			}
+			z:not(.final){ background:#888; cursor: pointer; }
+			z:not(.final):hover{background:#999}
+			z.final{ background:#555; }
+			z.bomb-0.final{ background:#aaa; }
+			z.bomb-1{ color: #fff; }
+			z.bomb-2{ color: #ff0; }
+			z.bomb-3{ color: #f0f; }
+			z.bomb-4{ color: #f00; }
+			z.bomb-5{ color: #0ff; }
+			z.bomb-6{ color: #0f0; }
+			z.bomb-7{ color: #00f; }
+			z.bomb-8{ color: #000; }
+			z.bomb{ background:#000 }
+			z.flagged{ background:#e00!important; }
+			z.flagged:hover{ background:#f11 }
+		</style>
+	</head>
+	<body oncontextmenu="return false;">
+		<div class="minefield">
+			<!--Z is a square - tag reduced to single letter to save file space-->
+			<z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z><z></z>
+		</div>
+		<script>
+			// [bomb, uncovered, flagged]
+			const dimensions="10x10", totalSquares = 100, bombs = 20;
+			let grid, start, ended, first;
+			function init(){
+				document.querySelectorAll("z").forEach(sq=>{sq.innerHTML=sq.className="";})
+				start = Date.now();
+				grid = new Array(bombs).fill(null).map(()=>[true, false, false]).concat(new Array(totalSquares-bombs).fill(null).map(()=>[false, false, false])).sort(_=>Math.random()-0.5);
+				ended = false;
+				first = true;
+			}
+			document.addEventListener("DOMContentLoaded", ()=>{
+				init();
+				document.querySelectorAll("z").forEach((square, index)=>{
+					square.addEventListener("click", ()=>{
+						if(ended || grid[index].slice(1).some(a=>a)) return;
+						uncover(index,square);
+						if(grid.filter(a=>!a[1]).length <= bombs && !ended){
+							setTimeout(init, 2000);
+							ended = true;
+							let t = (Date.now() - start)/1000;
+							setTimeout(alert, 10, `NICEE! Completed in ${((t-t%60)/60).toString().padStart(2, "0")}:${(Math.round(t)%60).toString().padStart(2, "0")}.${Math.round((t-Math.floor(t))*1000).toString().padStart(3, "0")}\nRestarting in 2 seconds...\n\nFlexing info: ${dimensions} grid at ${Math.round(bombs/totalSquares*10000)/100}%`);
+						}
+					});
+
+					square.addEventListener("contextmenu", ()=>{
+						if(ended || grid[index][1]) return false;
+						grid[index][2] = square.classList.toggle("flagged")
+					});
+				});
+			});
+			
+			function uncover(index, square){
+				if(grid[index][1] || grid[index][2]) return;
+				while(first && (grid[index][0] || neighboursOf(index).filter(a=>grid[a][0]).length)) init(); // first-time invincibility + blankness
+				first = false;
+				grid[index][1] = true;
+				if (grid[index][0]){
+					// bomb
+					ended = true;
+					grid.forEach((a, i)=>{
+						const square = document.querySelector(`z:nth-child(${i+1})`);
+						if(a[0]) return square.classList.add("bomb", "final");
+						square.innerHTML = neighboursOf(i).filter(a=>grid[a][0]).length||"";
+						square.classList.add("final", "bomb-"+(square.innerHTML || 0));
+					});
+					setTimeout(init, 5000);
+					setTimeout(alert, 100, "U bad. Restarting in 5 seconds...");
+				}
+				else{
+					// set the inner html
+					square.innerHTML = neighboursOf(index).filter(a=>grid[a][0]).length || "";
+					square.classList.add("final", "bomb-"+(square.innerHTML || 0));
+					if(square.innerHTML == ""){ // no bombs?
+						// uncover neighbours that aren't already so
+						return neighboursOf(index).forEach((i)=>uncover(i, document.querySelector(`z:nth-child(${i+1})`)));
+					}
+				}
+			}
+			
+			function neighboursOf(i){
+				return [i%10!=9&&i+1, i%10!=0&&i-1, i%10!=0&&i+9, i%10!=9&&i-9, i+10, i-10, i%10!=9&&i+11, i%10!=0&&i-11 ].filter(a=>typeof a == "number"&&a>=0&&a<=99&&a!=i);
+			}
+		</script>
+	</body>
+</html>
